@@ -12,10 +12,13 @@ pipeline {
         stage('Cleanup') {
             steps {
                 sh '''
-                    echo "***CONTAINERS EXISTENTES***"
+                    echo "Listando os containers existentes: "
                     docker ps -a
                     docker rm -f mysql
                     docker rm -f web
+                    rm -rf DEVOPS_Cloud2025
+                    docker network rm dockerNetwork
+                    docker volume prune -f
                 '''
             }
         }
@@ -24,10 +27,10 @@ pipeline {
             steps {
                 sh '''
                     git clone https://github.com/nikolasluis/DEVOPS_Cloud2025.git
-                    echo "***ARQUIVOS IMPORTADOS***"
-                    ls -l
-                    ls -l db
-                    ls -l web
+                    echo "Listando todos os arquivos importados"
+                    ls -l DEVOPS_Cloud2025
+                    ls -l DEVOPS_Cloud2025/web
+                    ls -l DEVOPS_Cloud2025/db
                 '''
             }
         }
@@ -35,11 +38,11 @@ pipeline {
         stage('Construção') {
             steps {
                 sh '''
-                    echo "***CONSTRUINDO DOCKER MYSQL***"
-                    docker build -t mysql-img -f db/Dockerfile.mysql db/
+                    echo "Construindo docker MySQL"
+                    docker build -t mysql-img -f DEVOPS_Cloud2025/db/Dockerfile.mysql DEVOPS_Cloud2025/db/
 
-                    echo "***CONSTRUINDO DOCKER WEB***"
-                    docker build -t web-img -f web/Dockerfile.web web/
+                    echo "Construindo docker Python Web"
+                    docker build -t web-img -f DEVOPS_Cloud2025/web/Dockerfile.web DEVOPS_Cloud2025/web/
                 '''
             }
         }
@@ -49,17 +52,18 @@ pipeline {
                 sh '''
                     docker network create dockerNetwork || true
 
-                    echo "***RODANDO SQL DOCKER***"
+                    echo "Inicia docker MySQL"
                     docker run -d --name mysql \
                         --network dockerNetwork \
                         -e MYSQL_ROOT_PASSWORD=$MYSQL_PASSWORD \
                         -e MYSQL_DATABASE=$MYSQL_DBNAME \
-                        -v $WORKSPACE/codigo.sql:/docker-entrypoint-initdb.d/init.sql \
+                        -v $WORKSPACE/DEVOPS_Cloud2025/db/codigo.sql:/docker-entrypoint-initdb.d/init.sql \
                         mysql-img
 
-                    sleep 20
+                    echo "Aguardando inicialização docker MySQL"
+                    sleep 5
 
-                 echo "***RODANDO WEB DOCKER***"
+                    echo "Inicia docker Web"
                     docker run -d --name web \
                         --network dockerNetwork \
                         -p 8200:8200 \
@@ -69,8 +73,8 @@ pipeline {
                         -e MYSQL_DBNAME=$MYSQL_DBNAME \
                         web-img
 
-                     echo "***CONTAINERS SENDO EXECUTADOS***"
-                    docker ps
+                    echo "Listando dockers executadas*"
+                    docker ps -a
                 '''
             }
         }
