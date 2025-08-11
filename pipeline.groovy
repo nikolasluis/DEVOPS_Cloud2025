@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        MYSQL_USERNAME = 'root'
-        MYSQL_PASSWORD = '123456'
+        MYSQL_USERNAME = 'username'
+        MYSQL_PASSWORD = 'password'
         MYSQL_ADDRESS  = 'mysql:3306'
         MYSQL_DBNAME   = 'docker_e_kubernetes'
     }
@@ -12,20 +12,19 @@ pipeline {
         stage('Cleanup') {
             steps {
                 sh '''
-                    echo "Listando containers existentes antes da limpeza:"
+                    echo "***CONTAINERS EXISTENTES***"
                     docker ps -a
-                    docker rm -f mysql || true
-                    docker rm -f web || true
-                    docker system prune -af || true
+                    docker rm -f mysql
+                    docker rm -f web
                 '''
             }
         }
 
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/nikolasluis/DEVOPS_Cloud2025.git'
                 sh '''
-                    echo "Conteúdo do workspace após checkout:"
+                    git clone https://github.com/nikolasluis/DEVOPS_Cloud2025.git
+                    echo "***ARQUIVOS IMPORTADOS***"
                     ls -l
                     ls -l db
                     ls -l web
@@ -36,16 +35,10 @@ pipeline {
         stage('Construção') {
             steps {
                 sh '''
-                    echo "Conteúdo da pasta db para o build do MySQL:"
-                    ls -l db
-
-                    echo "Construindo imagem mysql-img..."
+                    echo "***CONSTRUINDO DOCKER MYSQL***"
                     docker build -t mysql-img -f db/Dockerfile.mysql db/
 
-                    echo "Conteúdo da pasta web para o build do web:"
-                    ls -l web
-
-                    echo "Construindo imagem web-img..."
+                    echo "***CONSTRUINDO DOCKER WEB***"
                     docker build -t web-img -f web/Dockerfile.web web/
                 '''
             }
@@ -54,21 +47,21 @@ pipeline {
         stage('Entrega') {
             steps {
                 sh '''
-                    docker network create mynetwork || true
+                    docker network create dockerNetwork || true
 
-                    echo "Rodando container mysql..."
+                    echo "***RODANDO SQL DOCKER***"
                     docker run -d --name mysql \
-                        --network mynetwork \
+                        --network dockerNetwork \
                         -e MYSQL_ROOT_PASSWORD=$MYSQL_PASSWORD \
                         -e MYSQL_DATABASE=$MYSQL_DBNAME \
                         -v $WORKSPACE/codigo.sql:/docker-entrypoint-initdb.d/init.sql \
                         mysql-img
 
-                    sleep 15
+                    sleep 20
 
-                    echo "Rodando container web..."
+                 echo "***RODANDO WEB DOCKER***"
                     docker run -d --name web \
-                        --network mynetwork \
+                        --network dockerNetwork \
                         -p 8200:8200 \
                         -e MYSQL_USERNAME=$MYSQL_USERNAME \
                         -e MYSQL_PASSWORD=$MYSQL_PASSWORD \
@@ -76,7 +69,7 @@ pipeline {
                         -e MYSQL_DBNAME=$MYSQL_DBNAME \
                         web-img
 
-                    echo "Containers em execução:"
+                     echo "***CONTAINERS SENDO EXECUTADOS***"
                     docker ps
                 '''
             }
