@@ -2,7 +2,7 @@ CREATE DATABASE IF NOT EXISTS docker_e_kubernetes;
 
 USE docker_e_kubernetes;
 
-CREATE TABLE atividade02 (
+CREATE TABLE IF NOT EXISTS atividade02 (
     ID INT NOT NULL,
     FirstName VARCHAR(30) NOT NULL,
     LastName VARCHAR(100),
