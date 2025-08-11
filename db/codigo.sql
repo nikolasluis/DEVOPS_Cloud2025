@@ -1,4 +1,4 @@
-CREATE DATABASE docker_e_kubernetes;
+CREATE DATABASE IF NOT EXISTS docker_e_kubernetes;
 
 USE docker_e_kubernetes;
 
